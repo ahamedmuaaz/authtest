@@ -1,29 +1,98 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow
- */
+import React from 'react';
+import {
+  ActivityIndicator,
+  AsyncStorage,
+  Button,
+  StatusBar,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { createStackNavigator, createSwitchNavigator, createAppContainer } from 'react-navigation';
 
-import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, View} from 'react-native';
+class SignInScreen extends React.Component {
+  static navigationOptions = {
+    title: 'Please sign in',
+  };
 
-const instructions = Platform.select({
-  ios: 'Press Cmd+R to reload,\n' + 'Cmd+D or shake for dev menu',
-  android:
-    'Double tap R on your keyboard to reload,\n' +
-    'Shake or press menu button for dev menu',
-});
-
-type Props = {};
-export default class App extends Component<Props> {
   render() {
     return (
       <View style={styles.container}>
-        <Text style={styles.welcome}>Welcome to React Native!</Text>
-        <Text style={styles.instructions}>To get started, edit App.js</Text>
-        <Text style={styles.instructions}>{instructions}</Text>
+        <Button title="Sign in!" onPress={this._signInAsync} />
+      </View>
+    );
+  }
+
+  _signInAsync = async () => {
+    await AsyncStorage.setItem('userToken', 'abc');
+    this.props.navigation.navigate('App');
+  };
+}
+
+class HomeScreen extends React.Component {
+  static navigationOptions = {
+    title: 'Welcome to the app!',
+  };
+
+  render() {
+    return (
+      <View style={styles.container}>
+        <Button title="Show me more of the app" onPress={this._showMoreApp} />
+        <Button title="Actually, sign me out :)" onPress={this._signOutAsync} />
+      </View>
+    );
+  }
+
+  _showMoreApp = () => {
+    this.props.navigation.navigate('Other');
+  };
+
+  _signOutAsync = async () => {
+    await AsyncStorage.clear();
+    this.props.navigation.navigate('Auth');
+  };
+}
+
+class OtherScreen extends React.Component {
+  static navigationOptions = {
+    title: 'Lots of features here',
+  };
+
+  render() {
+    return (
+      <View style={styles.container}>
+        <Button title="I'm done, sign me out" onPress={this._signOutAsync} />
+        <StatusBar barStyle="default" />
+      </View>
+    );
+  }
+
+  _signOutAsync = async () => {
+    await AsyncStorage.clear();
+    this.props.navigation.navigate('Auth');
+  };
+}
+
+class AuthLoadingScreen extends React.Component {
+  constructor() {
+    super();
+    this._bootstrapAsync();
+  }
+
+  // Fetch the token from storage then navigate to our appropriate place
+  _bootstrapAsync = async () => {
+    const userToken = await AsyncStorage.getItem('userToken');
+
+    // This will switch to the App screen or Auth screen and this loading
+    // screen will be unmounted and thrown away.
+    this.props.navigation.navigate(userToken ? 'App' : 'Auth');
+  };
+
+  // Render any loading content that you like here
+  render() {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator />
+        <StatusBar barStyle="default" />
       </View>
     );
   }
@@ -32,18 +101,21 @@ export default class App extends Component<Props> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5FCFF',
-  },
-  welcome: {
-    fontSize: 20,
-    textAlign: 'center',
-    margin: 10,
-  },
-  instructions: {
-    textAlign: 'center',
-    color: '#333333',
-    marginBottom: 5,
+    justifyContent: 'center',
   },
 });
+
+const AppStack = createStackNavigator({ Home: HomeScreen, Other: OtherScreen });
+const AuthStack = createStackNavigator({ SignIn: SignInScreen });
+
+export default createAppContainer(createSwitchNavigator(
+  {
+    AuthLoading: AuthLoadingScreen,
+    App: AppStack,
+    Auth: AuthStack,
+  },
+  {
+    initialRouteName: 'AuthLoading',
+  }
+));
